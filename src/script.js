@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import * as dat from 'lil-gui'
 
 /**
@@ -15,11 +17,41 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
+ * Fonts
+ */
+const fontLoader = new FontLoader()
+fontLoader.load('/fonts/gentilis_regular.typeface.json', (font) => {
+	const textGeometry = new TextGeometry('Star Wars', {
+		font: font,
+		size: 0.5,
+		height: 0.2,
+		curveSegments: 4,
+		bevelEnabled: true,
+		bevelThickness: 0.03,
+		bevelSize: 0.02,
+		bevelOffset: 0,
+		bevelSegments: 4,
+	})
+
+	const text = new THREE.Mesh(textGeometry, new THREE.MeshNormalMaterial())
+	textGeometry.center()
+	text.position.y = 0.5
+	scene.add(text)
+})
+
+/**
  * Galaxy
  */
 const parameters = {}
 parameters.count = 100000
-parameters.size = 0.001
+parameters.size = 0.01
+parameters.radius = 5
+parameters.branches = 7
+parameters.spin = 1.5
+parameters.randomness = 0.2
+parameters.randomnessPower = 3
+parameters.insideColor = '#ff6030'
+parameters.outsideColor = '#1b3984'
 
 let geometry, material, points
 
@@ -30,23 +62,58 @@ const generateGalaxy = () => {
 		material.dispose()
 		scene.remove(points)
 	}
-
 	geometry = new THREE.BufferGeometry()
 
 	// Randomize the position
 	const positions = new Float32Array(parameters.count * 3)
-	for (let i = 0; i < parameters.count * 3; i++) {
-		positions[i] = (Math.random() - 0.5) * 3
+	const colors = new Float32Array(parameters.count * 3)
+
+	const insideColor = new THREE.Color(parameters.insideColor)
+	const outsideColor = new THREE.Color(parameters.outsideColor)
+
+	for (let i = 0; i < parameters.count; i++) {
+		const i3 = i * 3
+
+		// Positions
+		const radius = Math.random() * parameters.radius
+		const spinAngle = radius * parameters.spin
+		const branchAngle =
+			((i % parameters.branches) / parameters.branches) * Math.PI * 2
+
+		const getRandom = () =>
+			Math.pow(Math.random(), parameters.randomnessPower) *
+			parameters.randomness *
+			(Math.random() < 0.5 ? 1 : -1)
+
+		const randomX = getRandom()
+		const randomY = getRandom()
+		const randomZ = getRandom()
+
+		// https://setosa.io/ev/sine-and-cosine/
+		positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX // x
+		positions[i3 + 1] = randomY // y
+		positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ // z
+
+		// Colors
+		const mixedColor = insideColor.clone()
+		const mixedRatio = radius / parameters.radius
+		mixedColor.lerp(outsideColor, mixedRatio)
+
+		colors[i3] = mixedColor.r // R
+		colors[i3 + 1] = mixedColor.g // G
+		colors[i3 + 2] = mixedColor.b // B
 	}
 
 	// Material
 	geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+	geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 	material = new THREE.PointsMaterial()
 	material.size = parameters.size
 	material.sizeAttenuation = true
 	material.transparent = true
 	material.depthWrite = false
 	material.blending = THREE.AdditiveBlending
+	material.vertexColors = true
 
 	// Add particles to the scene
 	points = new THREE.Points(geometry, material)
@@ -67,6 +134,38 @@ gui
 	.max(0.1)
 	.step(0.001)
 	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'radius')
+	.min(0.01)
+	.max(20)
+	.step(0.01)
+	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'branches')
+	.min(2)
+	.max(100)
+	.step(1)
+	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'spin')
+	.min(-5)
+	.max(5)
+	.step(0.001)
+	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'randomness')
+	.min(0)
+	.max(2)
+	.step(0.001)
+	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'randomnessPower')
+	.min(1)
+	.max(10)
+	.step(0.01)
+	.onFinishChange(generateGalaxy)
+gui.addColor(parameters, 'insideColor').onFinishChange(generateGalaxy)
+gui.addColor(parameters, 'outsideColor').onFinishChange(generateGalaxy)
 
 /**
  * Sizes
@@ -95,12 +194,12 @@ window.addEventListener('resize', () => {
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(
-	75,
+	50,
 	sizes.width / sizes.height,
 	0.1,
 	100
 )
-camera.position.x = 3
+camera.position.x = 1
 camera.position.y = 3
 camera.position.z = 3
 scene.add(camera)
