@@ -15,42 +15,68 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
- * Test cube
+ * Galaxy
  */
-const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial()
-)
-scene.add(cube)
+const parameters = {}
+parameters.count = 1000
+parameters.size = 0.02
+
+const generateGalaxy = () => {
+	const geometry = new THREE.BufferGeometry()
+
+	// Randomize the position
+	const positions = new Float32Array(parameters.count * 3)
+	for (let i = 0; i < parameters.count * 3; i++) {
+		positions[i] = (Math.random() - 0.5) * 3
+	}
+
+	// Material
+	geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+	const material = new THREE.PointsMaterial()
+	material.size = parameters.size
+	material.sizeAttenuation = true
+	material.transparent = true
+	material.depthWrite = false
+	material.blending = THREE.AdditiveBlending
+
+	// Add particles to the scene
+	const particles = new THREE.Points(geometry, material)
+	scene.add(particles)
+}
+generateGalaxy()
 
 /**
  * Sizes
  */
 const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight
+	width: window.innerWidth,
+	height: window.innerHeight,
 }
 
-window.addEventListener('resize', () =>
-{
-    // Update sizes
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+window.addEventListener('resize', () => {
+	// Update sizes
+	sizes.width = window.innerWidth
+	sizes.height = window.innerHeight
 
-    // Update camera
-    camera.aspect = sizes.width / sizes.height
-    camera.updateProjectionMatrix()
+	// Update camera
+	camera.aspect = sizes.width / sizes.height
+	camera.updateProjectionMatrix()
 
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+	// Update renderer
+	renderer.setSize(sizes.width, sizes.height)
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
 /**
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
+const camera = new THREE.PerspectiveCamera(
+	75,
+	sizes.width / sizes.height,
+	0.1,
+	100
+)
 camera.position.x = 3
 camera.position.y = 3
 camera.position.z = 3
@@ -64,7 +90,7 @@ controls.enableDamping = true
  * Renderer
  */
 const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
+	canvas: canvas,
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -74,18 +100,17 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
  */
 const clock = new THREE.Clock()
 
-const tick = () =>
-{
-    const elapsedTime = clock.getElapsedTime()
+const tick = () => {
+	const elapsedTime = clock.getElapsedTime()
 
-    // Update controls
-    controls.update()
+	// Update controls
+	controls.update()
 
-    // Render
-    renderer.render(scene, camera)
+	// Render
+	renderer.render(scene, camera)
 
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
+	// Call tick again on the next frame
+	window.requestAnimationFrame(tick)
 }
 
 tick()
