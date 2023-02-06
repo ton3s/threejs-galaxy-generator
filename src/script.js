@@ -18,11 +18,20 @@ const scene = new THREE.Scene()
  * Galaxy
  */
 const parameters = {}
-parameters.count = 1000
-parameters.size = 0.02
+parameters.count = 100000
+parameters.size = 0.001
+
+let geometry, material, points
 
 const generateGalaxy = () => {
-	const geometry = new THREE.BufferGeometry()
+	// Destroy old galaxy
+	if (points) {
+		geometry.dispose()
+		material.dispose()
+		scene.remove(points)
+	}
+
+	geometry = new THREE.BufferGeometry()
 
 	// Randomize the position
 	const positions = new Float32Array(parameters.count * 3)
@@ -32,7 +41,7 @@ const generateGalaxy = () => {
 
 	// Material
 	geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-	const material = new THREE.PointsMaterial()
+	material = new THREE.PointsMaterial()
 	material.size = parameters.size
 	material.sizeAttenuation = true
 	material.transparent = true
@@ -40,10 +49,24 @@ const generateGalaxy = () => {
 	material.blending = THREE.AdditiveBlending
 
 	// Add particles to the scene
-	const particles = new THREE.Points(geometry, material)
-	scene.add(particles)
+	points = new THREE.Points(geometry, material)
+	scene.add(points)
 }
 generateGalaxy()
+
+// Tweaks
+gui
+	.add(parameters, 'count')
+	.min(100)
+	.max(1000000)
+	.step(100)
+	.onFinishChange(generateGalaxy)
+gui
+	.add(parameters, 'size')
+	.min(0.001)
+	.max(0.1)
+	.step(0.001)
+	.onFinishChange(generateGalaxy)
 
 /**
  * Sizes
